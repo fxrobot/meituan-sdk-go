@@ -16,13 +16,13 @@
 # 获取方式
 
 ## Install
-go get github.com/T-Manson/meituan-sdk-go/meituan
+go get github.com/fxrobot/meituan-sdk-go/meituan
 
 ## Import
 ``` golang
-import "github.com/T-Manson/meituan-sdk-go/meituan"
+import "github.com/fxrobot/meituan-sdk-go/meituan"
 ```
 Finish.
 
 # demo
-see: [Example](https://github.com/T-Manson/meituan-sdk-go/tree/master/example)
+see: [Example](https://github.com/fxrobot/meituan-sdk-go/tree/master/example)

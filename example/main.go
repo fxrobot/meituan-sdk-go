@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/T-Manson/meituan-sdk-go/meituan"
+	"github.com/fxrobot/meituan-sdk-go/meituan"
 )
 
 const (
