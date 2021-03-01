@@ -33,5 +33,5 @@ func GetRequestUrl(method string) string {
 
 // MakeTimestamp
 func MakeTimestamp() int64 {
-	return time.Now().Unix()
+	return time.Now().UnixNano() / int64(time.Millisecond)
 }
