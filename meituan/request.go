@@ -249,7 +249,7 @@ func getSignValuesStr(req *Request) (signValuesStr, getUrl string) {
 	values.Add("app_id", req.AppId)
 	applicationParamStr := values.Encode()
 
-	getUrl = fmt.Sprintf("%s?%s%s", req.RequestUrl, applicationParamStr, commonConfig.consumerSecret)
+	getUrl = fmt.Sprintf("%s?%s", req.RequestUrl, applicationParamStr)
 
 	valuesStr, _ := url.QueryUnescape(applicationParamStr)
 	signValuesStr = fmt.Sprintf("%s?%s%s", req.RequestUrl, valuesStr, commonConfig.consumerSecret)
