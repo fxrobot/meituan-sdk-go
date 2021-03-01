@@ -59,7 +59,7 @@ func (req Request) CheckPushSign() bool {
 	if req.Sig == "" {
 		return false
 	}
-	sign, _, _ := req.makeSign()
+	sign, _ := req.makeSign()
 	return req.Sig == sign
 }
 
@@ -70,7 +70,7 @@ func (req Request) GetDataValue(key string) string {
 	return ""
 }
 
-func (req *Request) AddData(key string, value string) {
+func (req *Request) AddData(key, value string) {
 	if req.Data == nil {
 		req.Data = make(map[string]string)
 	}
@@ -134,19 +134,18 @@ func (req *Request) ParseRequestParams(reqBody string) error {
 	return nil
 }
 
-func (req *Request) getFinalRequestUrl() (finalRequestUrl string, applicationParamStr string) {
+func (req *Request) getFinalRequestUrl() (finalRequestUrl, applicationParamStr string) {
 	req.Timestamp = MakeTimestamp()
 	req.AppId = commonConfig.appId
 
-	var signValuesStr string
-	req.Sig, signValuesStr, applicationParamStr = req.makeSign()
+	req.Sig, applicationParamStr = req.makeSign()
 
 	var finalRequestUrlValuesStr string
 	switch req.HttpMethod {
 	case http.MethodPost:
 		finalRequestUrlValuesStr = fmt.Sprintf("%s?app_id=%s&timestamp=%v", req.RequestUrl, req.AppId, req.Timestamp)
 	default:
-		finalRequestUrlValuesStr = strings.Replace(signValuesStr, commonConfig.consumerSecret, "", -1)
+		finalRequestUrlValuesStr = applicationParamStr
 	}
 	finalRequestUrl = fmt.Sprintf("%s&sig=%s", finalRequestUrlValuesStr, req.Sig)
 	return
@@ -171,18 +170,19 @@ func (req *Request) getFinalRequestUrl() (finalRequestUrl string, applicationPar
 // timestamp: request timestamp
 //
 // secret:  secret
-func (req *Request) makeSign() (sign string, signValuesStr string, applicationParamStr string) {
+func (req *Request) makeSign() (sign, applicationParamStr string) {
 	if req.RequestUrl == "" || req.AppId == "" || req.Timestamp == 0 {
-		return "", "", ""
+		return "", ""
 	}
 
+	var signValuesStr string
 	signValuesStr, applicationParamStr = getSignValuesStr(req)
-	fmt.Println("[Info][]makeSign sigValuesStr is: ", signValuesStr)
+	fmt.Println("[Info]makeSign sigValuesStr is: ", signValuesStr)
 	md5Tool := md5.New()
 	md5Tool.Write([]byte(signValuesStr))
 	md5Bytes := md5Tool.Sum(nil)
 	sign = hex.EncodeToString(md5Bytes)
-	fmt.Println("[Info][]makeSign sign is: ", sign)
+	fmt.Println("[Info]makeSign sign is: ", sign)
 	return
 }
 
@@ -218,14 +218,14 @@ func callApi(req Request) (*http.Response, error) {
 
 	client := http.Client{}
 
-	fmt.Println("[Info][]callApi requestUrl ", req.RequestUrl)
+	fmt.Println("[Info]callApi requestUrl ", req.RequestUrl)
 	finalRequestUrl, applicationParamStr = req.getFinalRequestUrl()
-	fmt.Println("[Info][]callApi finalRequestUrl ", finalRequestUrl)
+	fmt.Println("[Info]callApi finalRequestUrl ", finalRequestUrl)
 
 	// 美团Api请求方式仅有Post、Get两种模式
 	switch req.HttpMethod {
 	case http.MethodPost:
-		fmt.Println("[Info][]callApi POST data: ", applicationParamStr)
+		fmt.Println("[Info]callApi POST data: ", applicationParamStr)
 		response, err = client.Post(finalRequestUrl, HTTP_POST_CONTENT_TYPE,
 			strings.NewReader(applicationParamStr))
 	default:
@@ -233,7 +233,7 @@ func callApi(req Request) (*http.Response, error) {
 	}
 
 	if err != nil {
-		fmt.Println("[Error][]callApi ", req.RequestUrl, err.Error())
+		fmt.Println("[Error]callApi ", req.RequestUrl, err.Error())
 		return nil, err
 	}
 
@@ -241,7 +241,7 @@ func callApi(req Request) (*http.Response, error) {
 }
 
 // getSignValuesStr 返回：签名使用的字符串、应用参数form格式字符串
-func getSignValuesStr(req *Request) (signValuesStr string, applicationParamStr string) {
+func getSignValuesStr(req *Request) (signValuesStr, applicationParamStr string) {
 	values := req.parseDataToHttpUrlValues()
 	applicationParamStr = values.Encode()
 
