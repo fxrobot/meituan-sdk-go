@@ -170,19 +170,21 @@ func (req *Request) getFinalRequestUrl() (finalRequestUrl, applicationParamStr s
 // timestamp: request timestamp
 //
 // secret:  secret
-func (req *Request) makeSign() (sign, applicationParamStr string) {
+func (req *Request) makeSign() (sign, signValuesStr string) {
 	if req.RequestUrl == "" || req.AppId == "" || req.Timestamp == 0 {
 		return "", ""
 	}
 
-	var signValuesStr string
-	signValuesStr, applicationParamStr = getSignValuesStr(req)
+	signValuesStr, _ = getSignValuesStr(req)
 	fmt.Println("[Info]makeSign sigValuesStr is: ", signValuesStr)
 	md5Tool := md5.New()
 	md5Tool.Write([]byte(signValuesStr))
 	md5Bytes := md5Tool.Sum(nil)
 	sign = hex.EncodeToString(md5Bytes)
 	fmt.Println("[Info]makeSign sign is: ", sign)
+
+	// 发送请求时，中文需使用 utf-8 编码
+	signValuesStr = url.QueryEscape(signValuesStr)
 	return
 }
 
