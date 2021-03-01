@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // 美团POST请求正文类型
@@ -91,7 +93,7 @@ func (req *Request) ParseRequestParams(reqBody string) error {
 		// Why decode twice? see: http://developer.waimai.meituan.com/home/guide/6
 		var unescapeValuesStr string
 		if unescapeValuesStr, err = url.QueryUnescape(reqBody); err != nil {
-			fmt.Println("[Error]ParseRequestParams QueryUnescape1 ", err.Error())
+			logrus.Errorln("ParseRequestParams QueryUnescape1 ", err.Error())
 			return err
 		}
 
@@ -104,28 +106,28 @@ func (req *Request) ParseRequestParams(reqBody string) error {
 	}
 
 	if timestamp, ok = req.Data["timestamp"]; !ok {
-		errMsg := "[Error]ParseRequestParams timestamp can not be empty"
-		fmt.Println(errMsg)
+		errMsg := "ParseRequestParams timestamp can not be empty"
+		logrus.Errorln(errMsg)
 		return fmt.Errorf(errMsg)
 	}
 	delete(req.Data, "timestamp")
 
 	if appId, ok = req.Data["app_id"]; !ok {
-		errMsg := "[Error]ParseRequestParams app_id can not be empty"
-		fmt.Println(errMsg)
+		errMsg := "ParseRequestParams app_id can not be empty"
+		logrus.Errorln(errMsg)
 		return fmt.Errorf(errMsg)
 	}
 	delete(req.Data, "app_id")
 
 	if sig, ok = req.Data["sig"]; !ok {
-		errMsg := "[Error]ParseRequestParams sig can not be empty"
-		fmt.Println(errMsg)
+		errMsg := "ParseRequestParams sig can not be empty"
+		logrus.Errorln(errMsg)
 		return fmt.Errorf(errMsg)
 	}
 	delete(req.Data, "sig")
 
 	if req.Timestamp, err = strconv.ParseInt(timestamp, 10, 64); err != nil {
-		fmt.Println("[Error]ParseRequestParams ParseInt ", err.Error())
+		logrus.Errorln("ParseRequestParams ParseInt ", err.Error())
 		return err
 	}
 	req.AppId = appId
@@ -177,12 +179,12 @@ func (req *Request) makeSign() (sign, getUrl string) {
 
 	var signValuesStr string
 	signValuesStr, getUrl = getSignValuesStr(req)
-	fmt.Println("[Info]makeSign sigValuesStr is: ", signValuesStr)
+	logrus.Infoln("makeSign sigValuesStr is: ", signValuesStr)
 	md5Tool := md5.New()
 	md5Tool.Write([]byte(signValuesStr))
 	md5Bytes := md5Tool.Sum(nil)
 	sign = hex.EncodeToString(md5Bytes)
-	fmt.Println("[Info]makeSign sign is: ", sign)
+	logrus.Infoln("makeSign sign is: ", sign)
 	return
 }
 
@@ -218,14 +220,14 @@ func callApi(req Request) (*http.Response, error) {
 
 	client := http.Client{}
 
-	fmt.Println("[Info]callApi requestUrl ", req.RequestUrl)
+	logrus.Infoln("callApi requestUrl ", req.RequestUrl)
 	finalRequestUrl, applicationParamStr = req.getFinalRequestUrl()
-	fmt.Println("[Info]callApi finalRequestUrl ", finalRequestUrl)
+	logrus.Infoln("callApi finalRequestUrl ", finalRequestUrl)
 
 	// 美团Api请求方式仅有Post、Get两种模式
 	switch req.HttpMethod {
 	case http.MethodPost:
-		fmt.Println("[Info]callApi POST data: ", applicationParamStr)
+		logrus.Infoln("callApi POST data: ", applicationParamStr)
 		response, err = client.Post(finalRequestUrl, HTTP_POST_CONTENT_TYPE,
 			strings.NewReader(applicationParamStr))
 	default:
@@ -233,7 +235,7 @@ func callApi(req Request) (*http.Response, error) {
 	}
 
 	if err != nil {
-		fmt.Println("[Error]callApi ", req.RequestUrl, err.Error())
+		logrus.Errorln("callApi ", req.RequestUrl, err.Error())
 		return nil, err
 	}
 
@@ -243,12 +245,13 @@ func callApi(req Request) (*http.Response, error) {
 // getSignValuesStr 返回：签名使用的字符串、应用参数form格式字符串
 func getSignValuesStr(req *Request) (signValuesStr, getUrl string) {
 	values := req.parseDataToHttpUrlValues()
-	applicationParamStr := values.Encode()
-	getUrl = fmt.Sprintf("%s?%s%s", req.RequestUrl, applicationParamStr, commonConfig.consumerSecret)
-
 	values.Add("timestamp", strconv.FormatInt(req.Timestamp, 10))
 	values.Add("app_id", req.AppId)
-	valuesStr, _ := url.QueryUnescape(values.Encode())
+	applicationParamStr := values.Encode()
+
+	getUrl = fmt.Sprintf("%s?%s%s", req.RequestUrl, applicationParamStr, commonConfig.consumerSecret)
+
+	valuesStr, _ := url.QueryUnescape(applicationParamStr)
 	signValuesStr = fmt.Sprintf("%s?%s%s", req.RequestUrl, valuesStr, commonConfig.consumerSecret)
 	return
 }
